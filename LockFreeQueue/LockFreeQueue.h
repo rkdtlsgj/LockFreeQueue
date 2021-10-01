@@ -14,11 +14,130 @@ private:
 		T _data;
 		Node* _pNext;
 	};
+
+	struct TopNode
+	{
+		__int64 _iNumber;
+		Node* _pNode;
+	};
+
+
 	long _size;
-	Node* _head;        // 시작노드를 포인트한다.
-	Node* _tail;        // 마지막노드를 포인트한다.
+	__int64 iNumber;
+	//TopNode* _head;
+	//TopNode* _tail;
+	Node* _head;
+	Node* _tail;
 	CMemoryPool<Node>* pMemoryPool;
 public:
+
+	//CLockFreeQueue()
+	//{
+
+	//	pMemoryPool = new CMemoryPool<Node>(0);
+
+	//	_head = (TopNode*)_aligned_malloc(sizeof(TopNode), 16);
+	//	_head->_pNode = pMemoryPool->Alloc();
+	//	_head->_pNode->_pNext = NULL;
+	//	_head->_iNumber = 0;
+
+	//	_tail = (TopNode*)_aligned_malloc(sizeof(TopNode), 16);
+	//	_tail->_pNode = _head->_pNode;
+	//	_tail->_iNumber = 0;
+
+
+	//	_size = 0;
+	//	iNumber = 0;
+	//	//_head = new Node;
+	//	//_head = pMemoryPool->Alloc();
+	//	//_head->_pNext = NULL;
+
+	//	//_tail = _head;
+
+	//}
+
+	//void EnQueue(T t)
+	//{
+	//	Node* node = pMemoryPool->Alloc();
+	//	node->_data = t;
+	//	node->_pNext = NULL;
+	//	volatile __int64 enqNumber = InterlockedIncrement64(&iNumber);
+
+	//	TopNode tTempNode;
+	//	Node* next;
+	//	while (true)
+	//	{
+	//		tTempNode._iNumber = _tail->_iNumber;
+	//		tTempNode._pNode = _tail->_pNode;
+
+	//		next = tTempNode._pNode->_pNext;
+
+	//		if (next == NULL)
+	//		{
+	//			if (InterlockedCompareExchangePointer((PVOID*)& tTempNode._pNode->_pNext, node, next) == next)
+	//			{					
+	//				if (InterlockedCompareExchange128((volatile LONG64*)_tail, (LONG64)node, enqNumber, (LONG64*)& tTempNode) == false)
+	//				{
+	//					break;
+	//				};
+	//				break;
+	//			}
+	//		}
+	//		else
+	//		{
+	//			InterlockedCompareExchange128((volatile LONG64*)_tail, (LONG64)next ,enqNumber, (LONG64*)& tTempNode);
+	//		}
+	//	}
+
+	//	InterlockedIncrement(&_size);
+	//}
+
+	//int Dequeue(T& t)
+	//{
+	//	if (InterlockedDecrement(&_size) < 0)
+	//	{
+	//		InterlockedIncrement(&_size);
+	//		return false;
+	//	}
+
+	//	volatile __int64 deqNumber = InterlockedIncrement64(&iNumber);
+
+	//	TopNode hTempNode;
+	//	TopNode tTempNode;
+	//	Node* hNext;
+	//	while (true)
+	//	{			
+	//		hTempNode._iNumber = _head->_iNumber;
+	//		hTempNode._pNode = _head->_pNode;
+
+	//		tTempNode._iNumber = _tail->_iNumber;
+	//		tTempNode._pNode = _tail->_pNode;
+
+	//		hNext = hTempNode._pNode->_pNext;
+
+	//		//Head와 Tail이 같은경우
+	//		//Enqueue에서 값이 들어왔지만 아직 Tail을 못민경우			
+	//		//진짜 데이터가 없는 경우???
+	//		if (tTempNode._pNode->_pNext != NULL)
+	//		{
+	//			//InterlockedCompareExchange128((volatile LONG64*)_tail, (LONG64)tTempNode._pNode->_pNext, deqNumber, (LONG64*)& tTempNode);
+	//		}
+	//		else// if (hNext != NULL)
+	//		{
+	//			t = hNext->_data;
+	//			//if (InterlockedCompareExchangePointer((PVOID*)& _head, next, head) == head)
+	//			if(InterlockedCompareExchange128((volatile LONG64*)_head, (LONG64)hNext, deqNumber, (LONG64*)& hTempNode) == true)
+	//			{
+	//				pMemoryPool->Free(hTempNode._pNode);
+	//				break;
+	//			}
+	//		}
+
+	//	}
+	//	// InterlockedExchangeAdd(&_size, -1);
+	//	return true;
+	//}
+
 	CLockFreeQueue()
 	{
 
@@ -35,12 +154,8 @@ public:
 	void EnQueue(T t)
 	{
 		Node* node = pMemoryPool->Alloc();
-		//Node* node = new Node;
 		node->_data = t;
 		node->_pNext = NULL;
-
-		/*Node* tail = NULL;
-		Node* next = NULL;*/
 
 		while (true)
 		{
@@ -61,7 +176,7 @@ public:
 			}
 		}
 
-		InterlockedIncrement(&_size);// InterlockedExchangeAdd(&_size, 1);
+		InterlockedIncrement(&_size);
 	}
 
 	int Dequeue(T& t)
@@ -72,43 +187,37 @@ public:
 			return false;
 		}
 
-	/*	Node* head = NULL;
-		Node* next = NULL;
-*/
 		while (true)
 		{
 			Node* head = _head;
-			Node* next = head->_pNext;		
+			Node* next = head->_pNext;
 			Node* tail = _tail;
-			Node* tNext = _tail->_pNext;
-			long size = _size;
 
-			/*if (next == NULL)
-			{
-				return false;
+			/*{
+				InterlockedCompareExchangePointer((PVOID*)& _tail, tail->_pNext, tail);
 			}*/
-			if (head == tail)
+			//Head와 Tail이 같은경우
+			//Enqueue에서 값이 들어왔지만 아직 Tail을 못민경우			
+			//진짜 데이터가 없는 경우???
+			if (tail->_pNext != NULL)
 			{
-				if (tail->_pNext != NULL)
+				InterlockedCompareExchangePointer((PVOID*)& _tail, tail->_pNext, tail);
+			}
+			else if (next != NULL)
+			{
+				t = next->_data;
+				if (InterlockedCompareExchangePointer((PVOID*)& _head, next, head) == head)
 				{
-					InterlockedCompareExchangePointer((PVOID*)& _tail, tail->_pNext, tail);
+					pMemoryPool->Free(head);
+					break;
 				}
 			}
-			else
-			{
-				if (next != NULL)
-				{					
-					t = next->_data;
-					if (InterlockedCompareExchangePointer((PVOID*)& _head, next, head) == head)
-					{						
-						//delete head;
-						pMemoryPool->Free(head);
-						break;
-					}
-				}
-			}
+
 		}
 		// InterlockedExchangeAdd(&_size, -1);
 		return true;
 	}
 };
+
+//Head의 Next가 Null이 되는문제
+//Tail의 Next가 Tail되는 문제
